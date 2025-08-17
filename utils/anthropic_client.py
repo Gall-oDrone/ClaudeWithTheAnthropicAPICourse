@@ -147,6 +147,34 @@ class ChatClient(AnthropicClient):
         )
         return message.content[0].text
     
+    def send_message_stream(self, print_stream=True, print_final_message=True):
+        """
+        Send a streaming chat request to the Anthropic API.
+        
+        Args:
+            print_stream (bool): Whether to print the streamed text. Defaults to True.
+            
+        Returns:
+            tuple: (streamed_text, final_message) where streamed_text is the concatenated
+                   streamed response and final_message is the complete message object.
+        """
+        streamed_text = ""
+        
+        with self.client.messages.stream(
+            model=self.model,
+            **self.params
+        ) as stream:
+            for text in stream.text_stream:
+                streamed_text += text
+                if print_stream:
+                    print(text, end="")
+            
+            final_message = stream.get_final_message()
+            if print_final_message:
+                print(final_message.content[0].text)
+        
+        return streamed_text, final_message
+    
     def add_user_message(self, messages, text):
         """
         Add a user message to the messages list.
