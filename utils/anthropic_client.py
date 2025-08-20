@@ -118,19 +118,31 @@ class ChatClient(AnthropicClient):
         """
         return self.params["messages"]
     
-    def set_params(self, params: dict):
+    def set_stop_sequences(self, stop_sequences: list) -> None:
+        """
+        Set the stop sequences for the chat request.
+        """
+        self.params["stop_sequences"] = stop_sequences
+    
+    def get_stop_sequences(self) -> list:
+        """
+        Get the current stop sequences for the chat request.
+        """
+        return self.params["stop_sequences"]
+    
+    def set_params(self, params: dict) -> None:
         """
         Set the parameters for the chat request.
         """
         self.params = params
     
-    def get_params(self):
+    def get_params(self) -> dict:
         """
         Get the current parameters for the chat request.
         """
         return self.params
     
-    def send_message(self):
+    def send_message(self) -> str:
         """
         Send a chat request to the Anthropic API.
         
@@ -147,7 +159,7 @@ class ChatClient(AnthropicClient):
         )
         return message.content[0].text
     
-    def send_message_stream(self, print_stream=True, print_final_message=True):
+    def send_message_stream(self, print_stream: bool = True, print_final_message: bool = True) -> tuple[str, str]:
         """
         Send a streaming chat request to the Anthropic API.
         
@@ -175,7 +187,7 @@ class ChatClient(AnthropicClient):
         
         return streamed_text, final_message
     
-    def add_user_message(self, messages, text):
+    def add_user_message(self, messages: list, text: str) -> None:
         """
         Add a user message to the messages list.
         
@@ -186,7 +198,7 @@ class ChatClient(AnthropicClient):
         user_msg = {"role": "user", "content": text}
         messages.append(user_msg)
     
-    def add_assistant_message(self, messages, text):
+    def add_assistant_message(self, messages: list, text: str) -> None:
         """
         Add an assistant message to the messages list.
         
