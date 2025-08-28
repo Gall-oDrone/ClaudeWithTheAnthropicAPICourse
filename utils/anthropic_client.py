@@ -1,5 +1,9 @@
+import json
 from anthropic import Anthropic
-from typing import Optional
+from typing import Optional, List, Dict, Any
+
+from utils.chat_utils import text_to_json
+from utils.graders import Grader, GradingCriteria, GradingResult
 
 
 class AnthropicClient:
@@ -208,3 +212,109 @@ class ChatClient(AnthropicClient):
         """
         assistant_message = {"role": "assistant", "content": text}
         messages.append(assistant_message)
+
+    def generate_dataset(self, prompt: str, text:str, save_path: Optional[str] = None) -> list:
+        """
+        Generate a dataset of tasks using the Anthropic API.
+        """
+        self.add_user_message(self.params["messages"], prompt)
+        self.add_assistant_message(self.params["messages"], text)
+        response = self.send_message()
+        dataset = text_to_json(response)
+        if save_path:
+            with open(save_path, "w") as f:
+                json.dump(dataset, f, indent=4)
+        return dataset
+    
+    def run_test_case(self, test_case: Dict[str, str], grader: Optional[Grader] = None) -> Dict[str, Any]:
+        """
+        Run a single test case evaluation.
+        
+        Args:
+            test_case (Dict[str, str]): Dictionary containing 'prompt' and 'expected_response' keys
+            grader (Optional[Grader]): Grader instance to use. If None, creates a new one.
+            
+        Returns:
+            Dict[str, Any]: Test case results including response and grading
+        """
+        if grader is None:
+            grader = Grader()
+        
+        prompt = test_case.get("prompt", "")
+        expected_response = test_case.get("expected_response", "")
+        
+        # Generate response using the current client
+        self.params["messages"] = [{"role": "user", "content": prompt}]
+        actual_response = self.send_message()
+        
+        # Grade the response
+        grading_result = grader.grade_comprehensive(prompt, actual_response)
+        
+        return {
+            "test_case": test_case,
+            "actual_response": actual_response,
+            "grading_results": grading_result,
+            "passed": grading_result["model_grader"].passed and grading_result["code_grader"].passed
+        }
+    
+    def run_eval(self, test_dataset: List[Dict[str, str]], 
+                 save_results: bool = True, 
+                 results_path: str = "eval_results.json",
+                 grader: Optional[Grader] = None) -> Dict[str, Any]:
+        """
+        Run evaluation on a complete test dataset.
+        
+        Args:
+            test_dataset (List[Dict[str, str]]): List of test cases with 'prompt' and 'expected_response'
+            save_results (bool): Whether to save results to file
+            results_path (str): Path to save evaluation results
+            grader (Optional[Grader]): Grader instance to use. If None, creates a new one.
+            
+        Returns:
+            Dict[str, Any]: Complete evaluation results and summary
+        """
+        if grader is None:
+            grader = Grader()
+        
+        results = []
+        passed_count = 0
+        
+        for i, test_case in enumerate(test_dataset):
+            print(f"Running test case {i+1}/{len(test_dataset)}...")
+            
+            try:
+                test_result = self.run_test_case(test_case, grader)
+                results.append(test_result)
+                
+                if test_result["passed"]:
+                    passed_count += 1
+                    
+            except Exception as e:
+                print(f"Error in test case {i+1}: {str(e)}")
+                results.append({
+                    "test_case": test_case,
+                    "error": str(e),
+                    "passed": False
+                })
+        
+        # Generate summary
+        total_tests = len(test_dataset)
+        pass_rate = passed_count / total_tests if total_tests > 0 else 0
+        
+        summary = {
+            "total_tests": total_tests,
+            "passed_tests": passed_count,
+            "failed_tests": total_tests - passed_count,
+            "pass_rate": pass_rate,
+            "results": results
+        }
+        
+        # Save results if requested
+        if save_results:
+            with open(results_path, 'w') as f:
+                json.dump(summary, f, indent=4)
+            print(f"Results saved to {results_path}")
+        
+        print(f"Evaluation complete: {passed_count}/{total_tests} tests passed ({pass_rate:.2%})")
+        
+        return summary

@@ -8,7 +8,7 @@ def add_assistant_message(messages, text):
     assistant_message = {"role":"assistant","content":text}
     messages.append(assistant_message)
 
-def text_to_json(text):
+def text_to_json(text: str, kwargs: dict = None) -> dict:
     """
     Convert text input to JSON formatted output.
     
@@ -21,4 +21,7 @@ def text_to_json(text):
     Raises:
         json.JSONDecodeError: If the text cannot be parsed as valid JSON.
     """
-    return json.loads(text.strip())
+    if kwargs and kwargs.get("strip"):
+        return json.loads(text.strip())
+    else:
+        return json.loads(text.strip())
