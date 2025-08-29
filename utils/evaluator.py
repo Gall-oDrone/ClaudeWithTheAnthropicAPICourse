@@ -54,8 +54,8 @@ class Evaluator:
         """
         grader = self._get_or_create_grader()
         
-        prompt = test_case.get("task", "")
-        expected_response = test_case.get("expected_output", "")
+        prompt = test_case.get("prompt", "")
+        expected_response = test_case.get("expected_response", "")
         
         # Generate response using the chat client
         # Store original messages to restore later

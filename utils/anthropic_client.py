@@ -225,42 +225,6 @@ class ChatClient(AnthropicClient):
             with open(save_path, "w") as f:
                 json.dump(dataset, f, indent=4)
         return dataset
-    
-    def run_test_case(self, test_case: Dict[str, str], grader: Optional['Grader'] = None) -> Dict[str, Any]:
-        """
-        Run a single test case evaluation.
-        
-        Args:
-            test_case (Dict[str, str]): Dictionary containing 'prompt' and 'expected_response' keys
-            grader (Optional[Grader]): Grader instance to use. If None, creates a new one.
-            
-        Returns:
-            Dict[str, Any]: Test case results including response and grading
-        """
-        # Lazy import to avoid circular dependency
-        from utils.graders import Grader
-        
-        if grader is None:
-            grader = Grader()
-        
-        prompt = test_case.get("task", "")
-        expected_response = test_case.get("expected_output", "")
-        
-        # Generate response using the current client
-        self.params["messages"] = [{"role": "user", "content": prompt}]
-        actual_response = self.send_message()
-        
-        # Grade the response
-        grading_result = grader.grade_comprehensive(prompt, actual_response)
-        
-        return {
-            "test_case": test_case,
-            "actual_response": actual_response,
-            "grading_results": grading_result,
-            "passed": grading_result["model_grader"].passed and grading_result["code_grader"].passed
-        }
-    
-    def run_eval(self, test_dataset: List[Dict[str, str]], 
                  save_results: bool = True, 
                  results_path: str = "evaluation_results/eval_results.json",
                  grader: Optional['Grader'] = None) -> Dict[str, Any]:
@@ -291,7 +255,6 @@ class ChatClient(AnthropicClient):
             try:
                 test_result = self.run_test_case(test_case, grader)
                 results.append(test_result)
-                print("test_result:", test_result)
                 if test_result["passed"]:
                     passed_count += 1
                     
