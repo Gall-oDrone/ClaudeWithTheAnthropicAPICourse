@@ -3,7 +3,7 @@ from anthropic import Anthropic
 from typing import Optional, List, Dict, Any
 
 from utils.chat_utils import text_to_json
-from utils.graders import Grader, GradingCriteria, GradingResult
+# REMOVED: from utils.graders import Grader, GradingCriteria, GradingResult
 
 
 class AnthropicClient:
@@ -226,7 +226,7 @@ class ChatClient(AnthropicClient):
                 json.dump(dataset, f, indent=4)
         return dataset
     
-    def run_test_case(self, test_case: Dict[str, str], grader: Optional[Grader] = None) -> Dict[str, Any]:
+    def run_test_case(self, test_case: Dict[str, str], grader: Optional['Grader'] = None) -> Dict[str, Any]:
         """
         Run a single test case evaluation.
         
@@ -237,11 +237,14 @@ class ChatClient(AnthropicClient):
         Returns:
             Dict[str, Any]: Test case results including response and grading
         """
+        # Lazy import to avoid circular dependency
+        from utils.graders import Grader
+        
         if grader is None:
             grader = Grader()
         
-        prompt = test_case.get("prompt", "")
-        expected_response = test_case.get("expected_response", "")
+        prompt = test_case.get("task", "")
+        expected_response = test_case.get("expected_output", "")
         
         # Generate response using the current client
         self.params["messages"] = [{"role": "user", "content": prompt}]
@@ -259,8 +262,8 @@ class ChatClient(AnthropicClient):
     
     def run_eval(self, test_dataset: List[Dict[str, str]], 
                  save_results: bool = True, 
-                 results_path: str = "eval_results.json",
-                 grader: Optional[Grader] = None) -> Dict[str, Any]:
+                 results_path: str = "evaluation_results/eval_results.json",
+                 grader: Optional['Grader'] = None) -> Dict[str, Any]:
         """
         Run evaluation on a complete test dataset.
         
@@ -273,6 +276,9 @@ class ChatClient(AnthropicClient):
         Returns:
             Dict[str, Any]: Complete evaluation results and summary
         """
+        # Lazy import to avoid circular dependency
+        from utils.graders import Grader
+        
         if grader is None:
             grader = Grader()
         
@@ -285,7 +291,7 @@ class ChatClient(AnthropicClient):
             try:
                 test_result = self.run_test_case(test_case, grader)
                 results.append(test_result)
-                
+                print("test_result:", test_result)
                 if test_result["passed"]:
                     passed_count += 1
                     

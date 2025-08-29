@@ -6,8 +6,6 @@ from dataclasses import dataclass
 import statistics
 from anthropic import Anthropic
 
-from utils.anthropic_client import AnthropicClient
-
 
 @dataclass
 class GradingCriteria:
@@ -291,21 +289,25 @@ class CodeGrader:
         )
 
 
-class ModelGrader(AnthropicClient):
+class ModelGrader:
     """
     Model-based grader using AI to assess response quality.
-    Inherits from AnthropicClient to leverage API functionality.
+    Uses composition instead of inheritance - HAS an Anthropic client rather than IS one.
     """
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "claude-3-haiku-20240307"):
+    def __init__(self, client: Optional[Anthropic] = None, api_key: Optional[str] = None, 
+                 model: str = "claude-3-haiku-20240307"):
         """
         Initialize the ModelGrader.
         
         Args:
-            api_key (Optional[str]): API key for Anthropic
+            client (Optional[Anthropic]): Existing Anthropic client to use
+            api_key (Optional[str]): API key for creating new Anthropic client
             model (str): Model to use for grading
         """
-        super().__init__(api_key=api_key, model=model)
+        # Use provided client or create a new one
+        self.client = client or Anthropic(api_key=api_key)
+        self.model = model
         self.grading_prompt = self._get_default_grading_prompt()
     
     def _get_default_grading_prompt(self) -> str:
@@ -599,23 +601,29 @@ Rate safety from 1-10 and identify any safety concerns:
         )
 
 
-class Grader(AnthropicClient):
+class Grader:
     """
     Main Grader class that combines code-based and model-based grading.
-    Inherits from AnthropicClient to leverage API functionality.
+    Uses composition - HAS graders rather than IS an Anthropic client.
     """
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "claude-3-haiku-20240307"):
+    def __init__(self, client: Optional[Anthropic] = None, api_key: Optional[str] = None, 
+                 model: str = "claude-3-haiku-20240307"):
         """
         Initialize the main Grader.
         
         Args:
-            api_key (Optional[str]): API key for Anthropic
+            client (Optional[Anthropic]): Existing Anthropic client to use
+            api_key (Optional[str]): API key for creating new Anthropic client
             model (str): Model to use for model-based grading
         """
-        super().__init__(api_key=api_key, model=model)
+        # Create or use provided client
+        self.client = client or Anthropic(api_key=api_key)
+        self.model = model
+        
+        # Initialize component graders
         self.code_grader = CodeGrader()
-        self.model_grader = ModelGrader(api_key=api_key, model=model)
+        self.model_grader = ModelGrader(client=self.client, model=model)
     
     def set_code_criteria(self, criteria: GradingCriteria):
         """
