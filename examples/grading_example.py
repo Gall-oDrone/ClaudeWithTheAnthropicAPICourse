@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Comprehensive Grading System Example
 
@@ -124,7 +125,7 @@ You can call it like: factorial(5) which returns 120.
     print("\n=== Comprehensive Grading Example ===")
     
     comprehensive_prompt = "Write a Python function to sort a list of numbers in ascending order."
-    comprehensive_response = """
+    comprehensive_response = '''
 def sort_numbers(numbers):
     """Sort a list of numbers in ascending order."""
     return sorted(numbers)
@@ -134,7 +135,7 @@ my_list = [3, 1, 4, 1, 5, 9, 2, 6]
 sorted_list = sort_numbers(my_list)
 print(f"Original: {my_list}")
 print(f"Sorted: {sorted_list}")
-"""
+'''
     
     comprehensive_result = grader.grade_comprehensive(
         comprehensive_prompt, 
@@ -203,14 +204,14 @@ You are an expert Python code reviewer. Evaluate the following code response bas
 4. Efficiency (1-10): Is the code optimized and performant?
 
 Provide evaluation in JSON format:
-{
-    "code_quality": {"score": X, "reasoning": "explanation"},
-    "correctness": {"score": X, "reasoning": "explanation"},
-    "readability": {"score": X, "reasoning": "explanation"},
-    "efficiency": {"score": X, "reasoning": "explanation"},
+{{
+    "code_quality": {{"score": X, "reasoning": "explanation"}},
+    "correctness": {{"score": X, "reasoning": "explanation"}},
+    "readability": {{"score": X, "reasoning": "explanation"}},
+    "efficiency": {{"score": X, "reasoning": "explanation"}},
     "overall_score": X,
     "overall_feedback": "summary"
-}
+}}
 
 PROMPT: {prompt}
 CODE: {response}
@@ -252,12 +253,12 @@ def find_max(numbers):
     
     grader.set_code_criteria(advanced_criteria)
     
-    test_code = """
+    test_code = '''
 def multiply_numbers(a, b):
     """Multiply two numbers and return the result."""
     result = a * b
     return result
-"""
+'''
     
     print("\n2. Advanced Code Criteria:")
     advanced_result = grader.grade_code(test_code, language="python")
