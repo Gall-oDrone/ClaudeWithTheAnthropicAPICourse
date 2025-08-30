@@ -59,7 +59,8 @@ def test_evaluator():
         
         # Clean up
         if os.path.exists("test_eval_results.json"):
-            os.remove("test_eval_results.json")
+            #os.remove("test_eval_results.json")
+            pass
         
         return True
         

@@ -86,10 +86,22 @@ class Evaluator:
         grading_result = grader.grade_comprehensive(prompt, actual_response)
         
         # Determine if test passed
-        passed = (
-            grading_result["model_grader"].passed and 
-            grading_result["code_grader"].passed
-        )
+        # For text responses, only require model grader to pass
+        # For code responses, require both to pass
+        is_code_prompt = any(keyword in prompt.lower() for keyword in [
+            "function", "code", "program", "script", "def ", "class ", "import ",
+            "write a", "create a", "implement", "algorithm", "syntax"
+        ])
+        
+        if is_code_prompt:
+            # For code prompts, require both graders to pass
+            passed = (
+                grading_result["model_grader"].passed and 
+                grading_result["code_grader"].passed
+            )
+        else:
+            # For text prompts, only require model grader to pass
+            passed = grading_result["model_grader"].passed
         
         return {
             "test_case": test_case,
