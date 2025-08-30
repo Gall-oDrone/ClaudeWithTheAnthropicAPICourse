@@ -1,7 +1,21 @@
 import json
 from typing import Optional, List, Dict, Any
 
-from utils.graders import Grader
+from utils.graders import Grader, GradingResult
+
+
+class GradingResultEncoder(json.JSONEncoder):
+    """Custom JSON encoder for GradingResult objects"""
+    
+    def default(self, obj):
+        if isinstance(obj, GradingResult):
+            return {
+                "score": obj.score,
+                "feedback": obj.feedback,
+                "details": obj.details,
+                "passed": obj.passed
+            }
+        return super().default(obj)
 
 
 class Evaluator:
@@ -145,7 +159,7 @@ class Evaluator:
         # Save results if requested
         if save_results:
             with open(results_path, 'w') as f:
-                json.dump(summary, f, indent=4)
+                json.dump(summary, f, indent=4, cls=GradingResultEncoder)
             if verbose:
                 print(f"\nResults saved to {results_path}")
         
