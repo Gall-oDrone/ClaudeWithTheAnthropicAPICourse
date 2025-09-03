@@ -163,10 +163,16 @@ class CodeGrader:
         try:
             if language.lower() == "python":
                 ast.parse(output)
-            elif language.lower() == "json":
-                json.loads(output)
+            elif language.lower() in ["json", "xml", "yaml", "csv", "markdown"]:
+                # Delegate format validation to FormatGrader
+                result["passed"] = True
+                result["feedback"] = f"Format validation should use FormatGrader for {language}"
+                result["delegated_to"] = "FormatGrader"
             elif language.lower() == "regex":
                 re.compile(output)
+            elif language.lower() in ["javascript", "js"]:
+                # Basic JS syntax check (would need proper parser)
+                result["feedback"] = "JavaScript syntax validation not fully implemented"
             else:
                 result["passed"] = False
                 result["feedback"] = f"Unsupported language: {language}"
@@ -274,6 +280,18 @@ class CodeGrader:
         results = {}
         all_passed = True
         feedback_parts = []
+        
+        # Determine if this is a format that should be handled by FormatGrader
+        format_languages = ["json", "xml", "yaml", "csv", "markdown"]
+        
+        if language.lower() in format_languages:
+            # Return a delegation result
+            return GradingResult(
+                score=10.0,
+                feedback=f"Format validation for {language} should use FormatGrader",
+                details={"delegated": True, "format": language},
+                passed=True
+            )
         
         # Length check
         length_result = self.check_output_length(output)
@@ -1240,21 +1258,55 @@ class Grader:
         Returns:
             Dict[str, GradingResult]: Grading results
         """
-        code_result = self.grade_code(response, language)
+        results = {}
+        
+        # Detect if this is a format-specific task
+        format_languages = ["json", "xml", "yaml", "csv", "markdown"]
+        detected_format = self._detect_format_type(prompt, response)
+        
+        # Route appropriately based on language/format
+        if language.lower() in format_languages or detected_format != "text":
+            # This is primarily a format task
+            if include_format:
+                format_result = self.grade_format(response, language if language in format_languages else detected_format)
+                results["format_grader"] = format_result
+                
+                # For format tasks, code grader only checks non-format aspects
+                if self._should_check_code_quality(prompt):
+                    # Modified code grading that skips format validation
+                    modified_criteria = GradingCriteria(
+                        min_length=self.code_grader.criteria.min_length,
+                        max_length=self.code_grader.criteria.max_length,
+                        required_words=self.code_grader.criteria.required_words,
+                        forbidden_words=self.code_grader.criteria.forbidden_words,
+                        syntax_check=False,  # Skip syntax check for formats
+                        readability_threshold=self.code_grader.criteria.readability_threshold
+                    )
+                    temp_criteria = self.code_grader.criteria
+                    self.code_grader.criteria = modified_criteria
+                    code_result = self.grade_code(response, "text")
+                    self.code_grader.criteria = temp_criteria
+                    results["code_grader"] = code_result
+        else:
+            # This is a programming task
+            code_result = self.grade_code(response, language)
+            results["code_grader"] = code_result
+        
+        # Always include model grading for quality assessment
         model_result = self.grade_model(prompt, response)
-        
-        results = {
-            "code_grader": code_result,
-            "model_grader": model_result
-        }
-        
-        if include_format:
-            # Try to determine format type from prompt or use default
-            format_type = self._detect_format_type(prompt, response)
-            format_result = self.grade_format(response, format_type)
-            results["format_grader"] = format_result
+        results["model_grader"] = model_result
         
         return results
+    
+    def _should_check_code_quality(self, prompt: str) -> bool:
+        """
+        Determine if code quality checks (length, readability) are relevant.
+        """
+        code_indicators = [
+            "function", "code", "program", "script", "implement",
+            "algorithm", "class", "method", "write a", "create a"
+        ]
+        return any(indicator in prompt.lower() for indicator in code_indicators)
     
     def _detect_format_type(self, prompt: str, response: str) -> str:
         """
