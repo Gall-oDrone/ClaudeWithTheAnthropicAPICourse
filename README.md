@@ -64,6 +64,43 @@ This comprehensive course teaches developers how to integrate Claude AI into app
 - `001_requests.ipynb` - Basic API requests and authentication
 - *(More notebooks will be added as the course progresses)*
 
+## 🆕 New Features: Format Grading System
+
+The repository now includes a comprehensive **Format Grading System** that implements the format grading criteria outlined in the Anthropic API course curriculum. This system provides:
+
+### Format Validation Capabilities
+- **JSON**: Syntax validation, schema validation, required/forbidden field checking
+- **XML**: Structure validation, required section checking, tag balancing
+- **Markdown**: Header validation, content structure, code block requirements
+- **CSV**: Column validation, data consistency, required field checking
+- **YAML**: Format validation, field requirements, structure checking
+
+### Key Features
+- **Automatic Format Detection**: Intelligently detects expected output format from prompts
+- **Schema Validation**: JSON schema validation for complex data structures
+- **Content Validation**: Ensures required elements are present and forbidden elements are absent
+- **Integration**: Seamlessly integrates with existing code and model grading systems
+- **Batch Processing**: Supports batch evaluation with format-specific criteria
+- **Comprehensive Reporting**: Detailed feedback and scoring for format compliance
+
+### Usage Examples
+```python
+from utils.graders import FormatGrader, FormatGradingCriteria
+
+# Set up format criteria
+criteria = FormatGradingCriteria(
+    required_format="json",
+    required_fields=["name", "age", "email"],
+    forbidden_fields=["password"]
+)
+
+# Create grader and validate
+grader = FormatGrader(criteria)
+result = grader.grade(json_output, "json")
+```
+
+See `examples/format_grading_example.py` for comprehensive usage examples.
+
 ## 🔧 Course Modules
 
 ### 1. Accessing Claude with the API
@@ -80,6 +117,11 @@ This comprehensive course teaches developers how to integrate Claude AI into app
 - Test dataset generation
 - Model-based grading
 - Code-based grading
+- **Format-based grading** (NEW!)
+  - JSON/XML/Markdown/CSV/YAML validation
+  - Schema validation
+  - Required/forbidden field checking
+  - Structure and content validation
 
 ### 3. Prompt Engineering Techniques
 - Clear and direct communication

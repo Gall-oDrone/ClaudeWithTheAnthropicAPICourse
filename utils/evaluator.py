@@ -83,14 +83,19 @@ class Evaluator:
         self.chat_client.params["messages"] = original_messages
         
         # Grade the response
-        grading_result = grader.grade_comprehensive(prompt, actual_response)
+        grading_result = grader.grade_comprehensive(prompt, actual_response, include_format=True)
         
         # Determine if test passed
         # For text responses, only require model grader to pass
         # For code responses, require both to pass
+        # For format-specific responses, require format grader to pass
         is_code_prompt = any(keyword in prompt.lower() for keyword in [
             "function", "code", "program", "script", "def ", "class ", "import ",
             "write a", "create a", "implement", "algorithm", "syntax"
+        ])
+        
+        is_format_prompt = any(keyword in prompt.lower() for keyword in [
+            "json", "xml", "markdown", "csv", "yaml", "format", "structure"
         ])
         
         if is_code_prompt:
@@ -99,6 +104,9 @@ class Evaluator:
                 grading_result["model_grader"].passed and 
                 grading_result["code_grader"].passed
             )
+        elif is_format_prompt and "format_grader" in grading_result:
+            # For format prompts, require format grader to pass
+            passed = grading_result["format_grader"].passed
         else:
             # For text prompts, only require model grader to pass
             passed = grading_result["model_grader"].passed
@@ -248,6 +256,7 @@ class Evaluator:
         error_failures = []
         code_grader_failures = []
         model_grader_failures = []
+        format_grader_failures = []
         both_grader_failures = []
         
         for test in failed_tests:
@@ -257,19 +266,25 @@ class Evaluator:
                 grading = test.get('grading_results', {})
                 code_passed = grading.get('code_grader', {}).get('passed', False)
                 model_passed = grading.get('model_grader', {}).get('passed', False)
+                format_passed = grading.get('format_grader', {}).get('passed', False) if 'format_grader' in grading else True
                 
-                if not code_passed and not model_passed:
+                if not code_passed and not model_passed and not format_passed:
+                    both_grader_failures.append(test)
+                elif not code_passed and not model_passed:
                     both_grader_failures.append(test)
                 elif not code_passed:
                     code_grader_failures.append(test)
                 elif not model_passed:
                     model_grader_failures.append(test)
+                elif not format_passed:
+                    format_grader_failures.append(test)
         
         analysis = {
             "failure_count": len(failed_tests),
             "error_failures": len(error_failures),
             "code_grader_failures": len(code_grader_failures),
             "model_grader_failures": len(model_grader_failures),
+            "format_grader_failures": len(format_grader_failures),
             "both_grader_failures": len(both_grader_failures),
             "sample_failures": []
         }
@@ -287,6 +302,8 @@ class Evaluator:
                 grading = test.get('grading_results', {})
                 failure_detail['code_grader_feedback'] = grading.get('code_grader', {}).get('feedback', 'N/A')
                 failure_detail['model_grader_feedback'] = grading.get('model_grader', {}).get('feedback', 'N/A')
+                if 'format_grader' in grading:
+                    failure_detail['format_grader_feedback'] = grading.get('format_grader', {}).get('feedback', 'N/A')
             
             analysis['sample_failures'].append(failure_detail)
         

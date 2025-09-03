@@ -13,7 +13,7 @@ The system is designed based on the Anthropic Academy course content for prompt 
 import os
 import json
 from dotenv import load_dotenv
-from utils.graders import Grader, CodeGrader, ModelGrader, GradingCriteria, GradingResult
+from utils.graders import Grader, CodeGrader, ModelGrader, FormatGrader, FormatGradingCriteria, GradingCriteria, GradingResult
 
 def main():
     """Main function to demonstrate the grading system."""
@@ -35,6 +35,7 @@ def main():
     grader = Grader(api_key=api_key, model="claude-3-haiku-20240307")
     code_grader = CodeGrader()
     model_grader = ModelGrader(api_key=api_key, model="claude-3-haiku-20240307")
+    format_grader = FormatGrader()
     print("✅ Graders initialized!")
     
     # Example 1: Code-based grading
@@ -266,6 +267,78 @@ def multiply_numbers(a, b):
     print(f"   Passed: {advanced_result.passed}")
     print(f"   Feedback: {advanced_result.feedback}")
     
+    # Example 6: Format-based grading
+    print("\n=== Format-Based Grading Examples ===")
+    
+    # JSON format validation
+    json_criteria = FormatGradingCriteria(
+        required_format="json",
+        required_fields=["name", "age", "email"],
+        forbidden_fields=["password"]
+    )
+    
+    format_grader.criteria = json_criteria
+    
+    valid_json = '{"name": "John Doe", "age": 30, "email": "john@example.com"}'
+    invalid_json = '{"name": "Jane Doe", "age": 25, "password": "secret123"}'
+    
+    print("1. Valid JSON Format:")
+    result = format_grader.grade(valid_json, "json")
+    print(f"   Score: {result.score}/10")
+    print(f"   Passed: {result.passed}")
+    print(f"   Feedback: {result.feedback}")
+    
+    print("\n2. Invalid JSON Format:")
+    result = format_grader.grade(invalid_json, "json")
+    print(f"   Score: {result.score}/10")
+    print(f"   Passed: {result.passed}")
+    print(f"   Feedback: {result.feedback}")
+    
+    # Markdown format validation
+    markdown_criteria = FormatGradingCriteria(
+        required_format="markdown",
+        required_headers=["Title", "Introduction", "Conclusion"],
+        require_code_blocks=True
+    )
+    
+    format_grader.criteria = markdown_criteria
+    
+    valid_markdown = """# Title
+## Introduction
+This is the introduction.
+
+## Conclusion
+This concludes the document.
+
+```python
+print("Hello World")
+```
+"""
+    
+    print("\n3. Valid Markdown Format:")
+    result = format_grader.grade(valid_markdown, "markdown")
+    print(f"   Score: {result.score}/10")
+    print(f"   Passed: {result.passed}")
+    print(f"   Feedback: {result.feedback}")
+    
+    # Example 7: Comprehensive grading with format
+    print("\n=== Comprehensive Grading with Format ===")
+    
+    # Set format criteria for the main grader
+    grader.set_format_criteria(json_criteria)
+    
+    comprehensive_with_format = grader.grade_comprehensive(
+        "Create a JSON user profile", 
+        valid_json, 
+        language="json", 
+        include_format=True
+    )
+    
+    print("Comprehensive Grading Results (with Format):")
+    print(f"Code Grader: {comprehensive_with_format['code_grader'].score}/10")
+    print(f"Model Grader: {comprehensive_with_format['model_grader'].score}/10")
+    print(f"Format Grader: {comprehensive_with_format['format_grader'].score}/10")
+    
     print("\n=== Summary ===")
     print("This comprehensive grading system provides:")
     print("\nCode-Based Grading Features:")
@@ -283,15 +356,24 @@ def multiply_numbers(a, b):
     print("- ✅ Safety assessment")
     print("- ✅ Custom grading prompts")
     
+    print("\nFormat-Based Grading Features:")
+    print("- ✅ JSON format and schema validation")
+    print("- ✅ XML structure validation")
+    print("- ✅ Markdown formatting validation")
+    print("- ✅ CSV structure validation")
+    print("- ✅ YAML format validation")
+    print("- ✅ Required/forbidden field checking")
+    
     print("\nMain Grader Features:")
-    print("- ✅ Combined code and model grading")
+    print("- ✅ Combined code, model, and format grading")
     print("- ✅ Batch processing capabilities")
     print("- ✅ Comprehensive reporting")
     print("- ✅ Error handling and recovery")
-    print("- ✅ Inherits from AnthropicClient for API access")
+    print("- ✅ Automatic format detection")
     
     print("\nThe system is designed to be flexible, extensible, and follows the best practices")
     print("outlined in the Anthropic Academy course for prompt evaluation workflows.")
+    print("It now includes format grading criteria as specified in the course curriculum.")
 
 if __name__ == "__main__":
     main()
