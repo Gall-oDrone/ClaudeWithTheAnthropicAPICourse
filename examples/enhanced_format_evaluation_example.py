@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Enhanced Format-Aware Evaluation Example
 
@@ -10,6 +11,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from dotenv import load_dotenv
 from utils.anthropic_client import ChatClient
 from utils.evaluator import FormatAwareEvaluator
 from utils.graders import FormatGradingCriteria, GradingCriteria
@@ -17,8 +19,23 @@ from utils.graders import FormatGradingCriteria, GradingCriteria
 def main():
     """Run enhanced format-aware evaluation example."""
     
+    # Load environment variables
+    load_dotenv()
+    
+    # Get API key
+    api_key = os.getenv('ANTHROPIC_API_KEY')
+    if api_key is None:
+        print("❌ ANTHROPIC_API_KEY not found in environment variables")
+        print("Please set your API key in a .env file")
+        return
+    
+    print("✅ Setup complete!")
+    
     # Initialize chat client and evaluator
-    chat_client = ChatClient()
+    chat_client = ChatClient(api_key=api_key, params={
+        "messages": [],
+        "max_tokens": 1000
+    })
     evaluator = FormatAwareEvaluator(chat_client)
     
     # Sample format-aware test dataset
@@ -72,7 +89,7 @@ def main():
     results = evaluator.run_format_aware_eval_with_detailed_display(
         test_dataset=format_aware_dataset,
         save_results=True,
-        results_path="enhanced_eval_results.json",
+        results_path="evaluation_results/enhanced_eval_results.json",
         verbose=True,
         show_individual_tests=True,
         max_display=5
