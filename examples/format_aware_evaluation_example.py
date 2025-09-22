@@ -18,7 +18,7 @@ format_aware_dataset = [
     {
         "prompt": "Write a Python function that retrieves the list of EC2 instances in a specific AWS region",
         "format": "python",
-        "expected_response": "A Python function using boto3 to list EC2 instances",
+        "solution_criteria": "A Python function using boto3 to list EC2 instances",
         "grading_config": {
             "code": {
                 "min_length": 100,
@@ -30,7 +30,7 @@ format_aware_dataset = [
     {
         "prompt": "Create a JSON object that represents an AWS Lambda function configuration",
         "format": "json", 
-        "expected_response": "A valid JSON object with Lambda configuration properties",
+        "solution_criteria": "A valid JSON object with Lambda configuration properties",
         "grading_config": {
             "format": {
                 "required_fields": ["FunctionName", "Runtime", "Handler", "Role"],
@@ -54,7 +54,7 @@ format_aware_dataset = [
     {
         "prompt": "Write a regular expression to validate an AWS S3 bucket name",
         "format": "regex",
-        "expected_response": "A regex pattern that validates S3 bucket naming rules",
+        "solution_criteria": "A regex pattern that validates S3 bucket naming rules",
         "grading_config": {
             "code": {
                 "min_length": 20,

@@ -61,7 +61,7 @@ class Evaluator:
         Run a single test case evaluation.
         
         Args:
-            test_case (Dict[str, str]): Dictionary containing 'prompt' and optionally 'expected_response' keys
+            test_case (Dict[str, str]): Dictionary containing 'prompt' and optionally 'solution_criteria' keys
             
         Returns:
             Dict[str, Any]: Test case results including response and grading
@@ -69,7 +69,7 @@ class Evaluator:
         grader = self._get_or_create_grader()
         
         prompt = test_case.get("prompt", "")
-        expected_response = test_case.get("expected_response", "")
+        solution_criteria = test_case.get("solution_criteria", "")
         
         # Generate response using the chat client
         # Store original messages to restore later
@@ -114,7 +114,7 @@ class Evaluator:
         return {
             "test_case": test_case,
             "actual_response": actual_response,
-            "expected_response": expected_response,
+            "solution_criteria": solution_criteria,
             "grading_results": grading_result,
             "passed": passed
         }
@@ -128,7 +128,7 @@ class Evaluator:
         Run evaluation on a complete test dataset.
         
         Args:
-            test_dataset (List[Dict[str, str]]): List of test cases with 'prompt' and optionally 'expected_response'
+            test_dataset (List[Dict[str, str]]): List of test cases with 'prompt' and optionally 'solution_criteria'
             save_results (bool): Whether to save results to file
             results_path (str): Path to save evaluation results
             verbose (bool): Whether to print progress messages
@@ -364,7 +364,7 @@ class FormatAwareEvaluator(Evaluator):
         
         Args:
             test_dataset (List[Dict[str, Any]]): List of test cases with 'prompt', 'format', 
-                                                'expected_response', and 'grading_config'
+                                                'solution_criteria', and 'grading_config'
             save_results (bool): Whether to save results to file
             results_path (str): Path to save evaluation results
             verbose (bool): Whether to print enhanced progress messages
@@ -595,7 +595,7 @@ class FormatAwareEvaluator(Evaluator):
         
         Args:
             test_dataset (List[Dict[str, Any]]): List of test cases with 'prompt', 'format', 
-                                                'expected_response', and 'grading_config'
+                                                'solution_criteria', and 'grading_config'
             save_results (bool): Whether to save results to file
             results_path (str): Path to save evaluation results
             verbose (bool): Whether to print enhanced progress messages

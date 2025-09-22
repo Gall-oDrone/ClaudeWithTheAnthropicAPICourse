@@ -75,7 +75,7 @@ sample_dataset = [
     {
         "prompt": "Write a Python function that retrieves EC2 instances",
         "format": "python",
-        "expected_response": "A Python function using boto3",
+        "solution_criteria": "A Python function using boto3",
         "grading_config": {
             "code": {
                 "min_length": 50,
@@ -87,7 +87,7 @@ sample_dataset = [
     {
         "prompt": "Create a JSON object for Lambda configuration",
         "format": "json",
-        "expected_response": "A valid JSON object with Lambda properties",
+        "solution_criteria": "A valid JSON object with Lambda properties",
         "grading_config": {
             "format": {
                 "required_fields": ["FunctionName", "Runtime"],

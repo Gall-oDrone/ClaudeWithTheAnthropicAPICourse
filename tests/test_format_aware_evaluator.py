@@ -43,7 +43,7 @@ class TestFormatAwareEvaluator(unittest.TestCase):
             {
                 "prompt": "Write a Python function that retrieves EC2 instances",
                 "format": "python",
-                "expected_response": "A Python function using boto3",
+                "solution_criteria": "A Python function using boto3",
                 "grading_config": {
                     "code": {
                         "min_length": 50,
@@ -55,7 +55,7 @@ class TestFormatAwareEvaluator(unittest.TestCase):
             {
                 "prompt": "Create a JSON object for Lambda configuration",
                 "format": "json",
-                "expected_response": "A valid JSON object with Lambda properties",
+                "solution_criteria": "A valid JSON object with Lambda properties",
                 "grading_config": {
                     "format": {
                         "required_fields": ["FunctionName", "Runtime"],
@@ -67,7 +67,7 @@ class TestFormatAwareEvaluator(unittest.TestCase):
             {
                 "prompt": "Write a regex for S3 bucket validation",
                 "format": "regex",
-                "expected_response": "A regex pattern for S3 bucket naming",
+                "solution_criteria": "A regex pattern for S3 bucket naming",
                 "grading_config": {
                     "code": {
                         "min_length": 20,
@@ -322,7 +322,7 @@ class TestFormatAwareEvaluator(unittest.TestCase):
             mock_run_with_format.return_value = {
                 "test_case": self.sample_dataset[0],
                 "actual_response": "Mock response",
-                "expected_response": "A Python function using boto3",
+                "solution_criteria": "A Python function using boto3",
                 "grading_results": {
                     "code_grader": GradingResult(score=8.0, feedback="Good", details={}, passed=True),
                     "model_grader": GradingResult(score=9.0, feedback="Excellent", details={}, passed=True)
@@ -371,7 +371,7 @@ class TestFormatAwareEvaluatorIntegration(unittest.TestCase):
             {
                 "prompt": "Write a Python function that retrieves EC2 instances",
                 "format": "python",
-                "expected_response": "A Python function using boto3",
+                "solution_criteria": "A Python function using boto3",
                 "grading_config": {
                     "code": {
                         "min_length": 50,

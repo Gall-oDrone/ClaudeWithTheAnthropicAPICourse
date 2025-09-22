@@ -35,9 +35,9 @@ def test_evaluator():
     
     # Test with a simple dataset (same as your original code)
     test_dataset = [
-        {"prompt": "Write a hello world function", "expected_response": "A function that prints hello world"},
-        {"prompt": "What is 2+2?", "expected_response": "4"},  # Different field names
-        {"prompt": "Explain Python lists", "expected_response": "Explanation of Python lists"}  # Yet different names
+        {"prompt": "Write a hello world function", "solution_criteria": "A function that prints hello world"},
+        {"prompt": "What is 2+2?", "solution_criteria": "4"},  # Different field names
+        {"prompt": "Explain Python lists", "solution_criteria": "Explanation of Python lists"}  # Yet different names
     ]
     
     print("🚀 Testing evaluator with JSON serialization fix...")
