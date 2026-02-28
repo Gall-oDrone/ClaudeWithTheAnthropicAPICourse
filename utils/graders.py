@@ -1,11 +1,28 @@
 import json
 import re
 import ast
-from typing import Dict, List, Optional, Union, Any
+from typing import Dict, List, Optional, Union, Any, Tuple
 from dataclasses import dataclass
 import statistics
 from anthropic import Anthropic
+import warnings
 
+# Import grading prompt constants
+from prompts.grading_prompts import (
+    GRADING_PROMPT_1,
+    STRICT_PYTHON_GRADING_PROMPT_1,
+    STRICT_JSON_GRADING_PROMPT_1,
+    STRICT_REGEX_GRADING_PROMPT_1,
+    STRICT_XML_GRADING_PROMPT_1,
+    STRICT_YAML_GRADING_PROMPT_1,
+    STRICT_CSV_GRADING_PROMPT_1,
+    STRICT_MARKDOWN_GRADING_PROMPT_1,
+    RUBRIC_GRADING_PROMPT,
+)
+from utils.shared_utils import TemplateRenderer
+
+# Import shared utilities
+from utils.shared_utils import IncompletenessDetector, FormatDetector
 
 @dataclass
 class GradingCriteria:
@@ -359,6 +376,7 @@ class ModelGrader:
         self.model = model
         self.grading_prompt = self._get_default_grading_prompt()
     
+
     def _get_default_grading_prompt(self) -> str:
         """
         Get the default grading prompt template.
@@ -366,33 +384,7 @@ class ModelGrader:
         Returns:
             str: Default grading prompt
         """
-        return """
-You are an expert evaluator. Please assess the quality of the following response based on the given criteria.
-
-CRITERIA:
-1. Response Quality (1-10): How well does the response address the question/task?
-2. Instruction Following (1-10): How well does the response follow the given instructions?
-3. Completeness (1-10): How complete is the response in addressing all aspects?
-4. Helpfulness (1-10): How helpful and useful is the response?
-5. Safety (1-10): How safe and appropriate is the response?
-
-Please provide your evaluation in the following JSON format:
-{{
-    "response_quality": {{"score": X, "reasoning": "explanation"}},
-    "instruction_following": {{"score": X, "reasoning": "explanation"}},
-    "completeness": {{"score": X, "reasoning": "explanation"}},
-    "helpfulness": {{"score": X, "reasoning": "explanation"}},
-    "safety": {{"score": X, "reasoning": "explanation"}},
-    "overall_score": X,
-    "overall_feedback": "summary of evaluation"
-}}
-
-ORIGINAL PROMPT: {prompt}
-
-RESPONSE TO EVALUATE: {response}
-
-EVALUATION:
-"""
+        return GRADING_PROMPT_1
     
     def set_grading_prompt(self, prompt: str):
         """
@@ -403,6 +395,31 @@ EVALUATION:
         """
         self.grading_prompt = prompt
     
+    def set_strict_format_grading(self, format_type: str):
+        """
+        Set strict grading prompt for the specified format type.
+        
+        Args:
+            format_type (str): The expected format (python, json, regex, etc.)
+        """
+        if format_type == "python":
+            prompt = STRICT_PYTHON_GRADING_PROMPT_1
+        elif format_type == "json":
+            prompt = STRICT_JSON_GRADING_PROMPT_1
+        elif format_type == "regex":
+            prompt = STRICT_REGEX_GRADING_PROMPT_1
+        elif format_type == "xml":
+            prompt = STRICT_XML_GRADING_PROMPT_1
+        elif format_type == "yaml":
+            prompt = STRICT_YAML_GRADING_PROMPT_1
+        elif format_type == "csv":
+            prompt = STRICT_CSV_GRADING_PROMPT_1
+        elif format_type == "markdown":
+            prompt = STRICT_MARKDOWN_GRADING_PROMPT_1
+        else:
+            prompt = self._get_default_grading_prompt()
+        self.set_grading_prompt(prompt)
+
     def assess_response_quality(self, prompt: str, response: str) -> Dict[str, Any]:
         """
         Assess response quality using AI model.
@@ -613,6 +630,26 @@ Rate safety from 1-10 and identify any safety concerns:
         Returns:
             GradingResult: Comprehensive grading results
         """
+
+        # First check for obvious incompleteness
+        is_incomplete, error_msg = IncompletenessDetector.detect_incomplete_response(response)
+        if is_incomplete:
+            return GradingResult(
+                score=2.0,
+                feedback=error_msg,
+                details={"incomplete": True, "error": error_msg},
+                passed=False
+            )
+    
+        # Check for minimum response length
+        if len(response.strip()) < 10:
+            return GradingResult(
+                score=1.0,
+                feedback="Response is too short to be valid",
+                details={"error": "Response too short"},
+                passed=False
+            )
+
         # Get comprehensive evaluation
         quality_result = self.assess_response_quality(prompt, response)
         
@@ -648,6 +685,102 @@ Rate safety from 1-10 and identify any safety concerns:
             details=quality_result,
             passed=passed
         )
+
+    def grade_with_rubric(
+        self,
+        prompt: str,
+        response: str,
+        solution_criteria: Union[str, List[str]],
+        task_description: Optional[str] = None,
+        task_inputs: Optional[str] = None,
+        mandatory_criteria: Optional[str] = None,
+    ) -> GradingResult:
+        """
+        Grade using explicit criteria list and optional mandatory criteria.
+        Mandatory criteria violations force score <= 3.
+
+        Args:
+            prompt: Original prompt (used as task_description if task_description is None)
+            response: Response to evaluate
+            solution_criteria: Criteria list (string newline-separated or list of strings)
+            task_description: Optional explicit task description
+            task_inputs: Optional string representation of task inputs
+            mandatory_criteria: Optional mandatory requirements; any violation => score <= 3
+
+        Returns:
+            GradingResult with score, feedback (reasoning), details (strengths, weaknesses)
+        """
+        criteria_str = (
+            "\n".join(solution_criteria)
+            if isinstance(solution_criteria, list)
+            else (solution_criteria or "")
+        )
+        task_desc = task_description or prompt
+        inputs_str = task_inputs or ""
+
+        extra_section = ""
+        if mandatory_criteria:
+            extra_section = (
+                "Mandatory Requirements - ANY VIOLATION MEANS AUTOMATIC FAILURE (score of 3 or lower):\n"
+                "<extra_important_criteria>\n"
+                f"{mandatory_criteria}\n"
+                "</extra_important_criteria>"
+            )
+
+        formatted = TemplateRenderer.render(
+            RUBRIC_GRADING_PROMPT,
+            {
+                "task_description": task_desc,
+                "task_inputs": inputs_str,
+                "solution": response,
+                "solution_criteria": criteria_str,
+                "extra_criteria_section": extra_section,
+            },
+        )
+
+        try:
+            result = self.client.messages.create(
+                model=self.model,
+                max_tokens=1000,
+                temperature=0.0,
+                messages=[{"role": "user", "content": formatted}],
+            )
+            text = result.content[0].text
+            # Strip markdown code block if present
+            if "```" in text:
+                text = text.split("```")[1]
+                if text.startswith("json"):
+                    text = text[4:]
+            evaluation = json.loads(text.strip())
+            score = float(evaluation.get("score", 5.0))
+            reasoning = evaluation.get("reasoning", "")
+            strengths = evaluation.get("strengths", [])
+            weaknesses = evaluation.get("weaknesses", [])
+            passed = score >= 7.0
+            return GradingResult(
+                score=score,
+                feedback=reasoning,
+                details={
+                    "strengths": strengths,
+                    "weaknesses": weaknesses,
+                    "reasoning": reasoning,
+                },
+                passed=passed,
+            )
+        except (json.JSONDecodeError, KeyError) as e:
+            return GradingResult(
+                score=0.0,
+                feedback=f"Rubric grading parse error: {e}",
+                details={"error": str(e)},
+                passed=False,
+            )
+        except Exception as e:
+            return GradingResult(
+                score=0.0,
+                feedback=f"Rubric grading failed: {e}",
+                details={"error": str(e)},
+                passed=False,
+            )
 
 
 class FormatGrader:
@@ -1244,42 +1377,57 @@ class Grader:
         """
         return self.format_grader.grade(output, format_type)
     
-    def grade_comprehensive(self, prompt: str, response: str, language: str = "text", 
-                           include_format: bool = True) -> Dict[str, GradingResult]:
+    def grade_comprehensive(
+        self,
+        prompt: str,
+        response: str,
+        language: str = "text",
+        include_format: bool = True,
+        solution_criteria: Optional[Union[str, List[str]]] = None,
+        mandatory_criteria: Optional[str] = None,
+        task_description: Optional[str] = None,
+        task_inputs: Optional[str] = None,
+    ) -> Dict[str, GradingResult]:
         """
         Perform comprehensive grading including code-based, model-based, and optionally format-based grading.
-        
+
+        When solution_criteria is provided, model grading uses rubric-based grading with optional
+        mandatory_criteria (any violation forces score <= 3).
+
         Args:
-            prompt (str): Original prompt
-            response (str): Response to evaluate
-            language (str): Programming language for code grading
-            include_format (bool): Whether to include format grading
-            
+            prompt: Original prompt
+            response: Response to evaluate
+            language: Programming language for code grading
+            include_format: Whether to include format grading
+            solution_criteria: Optional criteria list for rubric-based model grading
+            mandatory_criteria: Optional mandatory requirements (violation => score <= 3)
+            task_description: Optional task description for rubric (defaults to prompt)
+            task_inputs: Optional string representation of task inputs for rubric
+
         Returns:
             Dict[str, GradingResult]: Grading results
         """
         results = {}
-        
+
         # Detect if this is a format-specific task
         format_languages = ["json", "xml", "yaml", "csv", "markdown"]
         detected_format = self._detect_format_type(prompt, response)
-        
+
         # Route appropriately based on language/format
         if language.lower() in format_languages or detected_format != "text":
-            # This is primarily a format task
             if include_format:
-                format_result = self.grade_format(response, language if language in format_languages else detected_format)
+                format_result = self.grade_format(
+                    response, language if language in format_languages else detected_format
+                )
                 results["format_grader"] = format_result
-                
-                # For format tasks, code grader only checks non-format aspects
+
                 if self._should_check_code_quality(prompt):
-                    # Modified code grading that skips format validation
                     modified_criteria = GradingCriteria(
                         min_length=self.code_grader.criteria.min_length,
                         max_length=self.code_grader.criteria.max_length,
                         required_words=self.code_grader.criteria.required_words,
                         forbidden_words=self.code_grader.criteria.forbidden_words,
-                        syntax_check=False,  # Skip syntax check for formats
+                        syntax_check=False,
                         readability_threshold=self.code_grader.criteria.readability_threshold
                     )
                     temp_criteria = self.code_grader.criteria
@@ -1288,14 +1436,23 @@ class Grader:
                     self.code_grader.criteria = temp_criteria
                     results["code_grader"] = code_result
         else:
-            # This is a programming task
             code_result = self.grade_code(response, language)
             results["code_grader"] = code_result
-        
-        # Always include model grading for quality assessment
-        model_result = self.grade_model(prompt, response)
+
+        # Model grading: use rubric when solution_criteria provided, else default
+        if solution_criteria:
+            model_result = self.model_grader.grade_with_rubric(
+                prompt=prompt,
+                response=response,
+                solution_criteria=solution_criteria,
+                task_description=task_description,
+                task_inputs=task_inputs,
+                mandatory_criteria=mandatory_criteria,
+            )
+        else:
+            model_result = self.grade_model(prompt, response)
         results["model_grader"] = model_result
-        
+
         return results
     
     def _should_check_code_quality(self, prompt: str) -> bool:
@@ -1319,35 +1476,7 @@ class Grader:
         Returns:
             str: Detected format type
         """
-        prompt_lower = prompt.lower()
-        response_lower = response.lower()
-        
-        # Check prompt for format indicators
-        if any(word in prompt_lower for word in ["json", "javascript object notation"]):
-            return "json"
-        elif any(word in prompt_lower for word in ["xml", "extensible markup language"]):
-            return "xml"
-        elif any(word in prompt_lower for word in ["markdown", "md", "github"]):
-            return "markdown"
-        elif any(word in prompt_lower for word in ["csv", "comma separated", "spreadsheet"]):
-            return "csv"
-        elif any(word in prompt_lower for word in ["yaml", "yml", "yaml file"]):
-            return "yaml"
-        
-        # Check response content for format indicators
-        if response.strip().startswith('{') and response.strip().endswith('}'):
-            return "json"
-        elif response.strip().startswith('<') and '>' in response:
-            return "xml"
-        elif '#' in response and ('```' in response or '**' in response or '*' in response):
-            return "markdown"
-        elif ',' in response and '\n' in response and response.count(',') > 2:
-            return "csv"
-        elif ':' in response and ('-' in response or response.count(':') > 2):
-            return "yaml"
-        
-        # Default to text if no format detected
-        return "text"
+        return FormatDetector.detect_format_type(prompt, response)
     
     def grade_batch(self, evaluations: List[Dict[str, str]], language: str = "text") -> List[Dict[str, Any]]:
         """

@@ -101,6 +101,36 @@ result = grader.grade(json_output, "json")
 
 See `examples/format_grading_example.py` for comprehensive usage examples.
 
+## 🆕 Prompt Eval Integrations (from Notebook Workflows)
+
+Integrations inspired by the prompt-engineering notebook (`notebooks/prompt_engineering_tecniques/002_prompting_completed.ipynb`) are available in the project:
+
+### Template renderer (`utils/shared_utils.py`)
+- **`TemplateRenderer.render(template_string, variables)`** – Substitute `{key}` placeholders; use `{{` and `}}` for literal braces. Useful for building prompts from multiple inputs.
+
+### Rubric grading with mandatory criteria (`utils/graders.py`, `prompts/grading_prompts.py`)
+- **`ModelGrader.grade_with_rubric(...)`** – Grade using an explicit criteria list and optional **mandatory criteria** (any violation → score ≤ 3).
+- **`Grader.grade_comprehensive(..., solution_criteria=..., mandatory_criteria=...)`** – When `solution_criteria` is provided, model grading uses rubric mode with optional mandatory requirements.
+- Prompt constant: `RUBRIC_GRADING_PROMPT` in `prompts/grading_prompts.py`.
+
+### HTML evaluation report (`utils/report.py`)
+- **`generate_evaluation_report(eval_summary, output_path=None, title=..., pass_threshold=7.0)`** – Builds an HTML report from evaluator results: summary stats (total tests, average score, pass rate) and a table (scenario, prompt/inputs, criteria, output, score, reasoning). Supports both simple and parameterized test cases.
+
+### Parameterized test cases (`utils/evaluator.py`)
+- Test cases can use **`prompt_template`** and **`prompt_inputs`** (dict); the evaluator resolves the prompt with `TemplateRenderer`. Optional **`scenario`** for display; **`solution_criteria`** and **`mandatory_criteria`** are passed to the grader for rubric grading.
+
+### Concurrency and progress (`utils/evaluator.py`)
+- **`run_eval(..., max_workers=1, html_report_path=None, progress_milestone_percent=20)`** – Optional parallel runs (`max_workers > 1`), HTML report generation to a file, and progress logging at configurable milestones.
+
+### Running tests
+```bash
+# Run integration tests (template renderer, report, evaluator options; some tests skip without anthropic)
+python3 -m pytest tests/test_template_renderer.py tests/test_report.py tests/test_integrations.py -v
+
+# Run shared-utils tests (includes TemplateRenderer)
+PYTHONPATH=. python3 tests/test_shared_utils.py
+```
+
 ## 🔧 Course Modules
 
 ### 1. Accessing Claude with the API
