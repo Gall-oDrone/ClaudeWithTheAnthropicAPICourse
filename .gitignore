@@ -175,6 +175,7 @@ secrets.json
 *.json
 *.xml
 *.txt
+!requirements.txt
 data/
 datasets/
 models/
