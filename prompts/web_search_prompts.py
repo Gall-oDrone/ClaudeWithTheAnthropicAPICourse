@@ -42,3 +42,10 @@ def user_query_focused(topic: str, constraints: str = "") -> str:
     if constraints.strip():
         return f"{base}\n\nAdditional constraints: {constraints}"
     return base
+
+
+# Optional: when you split a long web-grounded answer into chunks for per-chunk processing.
+WEB_SEARCH_CHUNK_FOLLOWUP_SYSTEM = (
+    "You will receive one chunk of a longer research answer. "
+    "Extract key facts and citations for this chunk only; do not invent content from other parts."
+)
