@@ -17,6 +17,14 @@ TOOL_TYPE_WEB_SEARCH_20260209 = "web_search_20260209"
 DEFAULT_WEB_SEARCH_TOOL_NAME = "web_search"
 DEFAULT_WEB_SEARCH_MODEL = "claude-sonnet-4-5"
 
+# Domains that work with Anthropic web search for finance / ML papers.
+# ``scholar.google.com`` often returns 500 (crawler / bot protection) — do not use in allowed_domains.
+ACADEMIC_FINANCE_ALLOWED_DOMAINS: List[str] = [
+    "arxiv.org",
+    "semanticscholar.org",
+    "ssrn.com",
+]
+
 
 @dataclass(frozen=True)
 class UserLocation:
@@ -87,6 +95,22 @@ def build_web_search_tool(config: Optional[WebSearchToolConfig] = None) -> Dict[
     """Return a single tool definition dict for the Messages API."""
     cfg = config or WebSearchToolConfig()
     return cfg.to_tool_dict()
+
+
+def academic_finance_tool_config(
+    max_uses: int = 5,
+    domains: Optional[List[str]] = None,
+) -> WebSearchToolConfig:
+    """
+    Tool config for literature-style finance queries without ``scholar.google.com``.
+
+    Google Scholar is not reliable with the server-side web search tool (frequent
+    ``InternalServerError``). Prefer open academic hosts (arXiv, Semantic Scholar, SSRN).
+    """
+    return WebSearchToolConfig(
+        max_uses=max_uses,
+        allowed_domains=list(domains or ACADEMIC_FINANCE_ALLOWED_DOMAINS),
+    )
 
 
 def append_message(

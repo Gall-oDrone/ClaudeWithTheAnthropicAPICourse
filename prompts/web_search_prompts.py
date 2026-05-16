@@ -15,18 +15,24 @@ WEB_SEARCH_SYSTEM_GROUNDED = """You are a careful research assistant. When you u
 WEB_SEARCH_SYSTEM_HEALTH = """You focus on evidence-based health and medical information.
 Prioritize reputable health institutions and government health agencies."""
 
-# For ``allowed_domains=["scholar.google.com"]`` — finance / econometrics literature reviews.
+# For academic finance research (pair with ``academic_finance_tool_config()`` in utils.web_search).
 SCHOLAR_FINANCE_RESEARCH_SYSTEM = (
-    "You are a research assistant. When summarizing Scholar results, name papers and authors when shown, "
+    "You are a research assistant. When summarizing academic search results, name papers and authors when shown, "
     "distinguish survey or review articles from primary empirical work, and flag uncertainty if snippets are incomplete."
 )
 
 
 def scholar_latest_financial_models_user(years_recent: str = "2–3") -> str:
-    """User message for Google Scholar–scoped search on recent financial modeling research."""
+    """
+    User message for finance-literature web search.
+
+    Use with ``academic_finance_tool_config()`` (arXiv, Semantic Scholar, SSRN).
+    Do not rely on ``allowed_domains=["scholar.google.com"]`` — the API often returns 500.
+    """
     return f"""
-Search Google Scholar for recent work (roughly the last {years_recent} years) on state-of-the-art or emerging financial models
-—for example asset pricing, risk measurement, derivatives, credit, or machine learning applied to finance.
+Search academic sources (e.g. arXiv, Semantic Scholar, SSRN) for recent work (roughly the last {years_recent} years)
+on state-of-the-art or emerging financial models—for example asset pricing, risk measurement, derivatives, credit,
+or machine learning applied to finance.
 
 Summarize: (1) main themes or model families, (2) a few representative paper titles and authors if they appear in results,
 and (3) what directions look most active right now. Keep the answer concise but concrete.

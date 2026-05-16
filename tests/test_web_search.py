@@ -5,9 +5,11 @@ from unittest.mock import MagicMock, patch
 
 
 from utils.web_search import (
+    ACADEMIC_FINANCE_ALLOWED_DOMAINS,
     TOOL_TYPE_WEB_SEARCH_20250305,
     UserLocation,
     WebSearchToolConfig,
+    academic_finance_tool_config,
     append_message,
     build_web_search_tool,
     text_from_message,
@@ -29,6 +31,13 @@ class TestWebSearchToolConfig(unittest.TestCase):
     def test_mutually_exclusive_domains_raises(self):
         with self.assertRaises(ValueError):
             WebSearchToolConfig(allowed_domains=["a.com"], blocked_domains=["b.com"])
+
+    def test_academic_finance_tool_config_excludes_scholar(self):
+        cfg = academic_finance_tool_config(max_uses=3)
+        d = cfg.to_tool_dict()
+        self.assertEqual(d["max_uses"], 3)
+        self.assertEqual(d["allowed_domains"], ACADEMIC_FINANCE_ALLOWED_DOMAINS)
+        self.assertNotIn("scholar.google.com", d["allowed_domains"])
 
     def test_user_location(self):
         loc = UserLocation(city="Austin", country="US", timezone="America/Chicago")
